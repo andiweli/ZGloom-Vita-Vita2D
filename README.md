@@ -1,9 +1,9 @@
 # ZGloom-Vita-Vita2D
 
-A Vita2D version of [ZGloom-Vita-SDL](https://github.com/andiweli/ZGloom-Vita-SDL) for the PlayStation Vita.  
-Based on version 3.0.
+A Vita2D version of [ZGloom-Vita-SDL](https://github.com/andiweli/ZGloom-Vita-SDL) for the PlayStation Vita with GPU rendering.  
+Based on version 3.0 of the SDL version.
 
-## Improvements on version 3.0
+## Improvements on version 3.0 (as in the SDL version)
 - Optimized and fixed renderer
 - FPS 50 / 30 Option (both at stable framerates)
 - Blood is now covered by walls if the enemy is beside or behind a wall
