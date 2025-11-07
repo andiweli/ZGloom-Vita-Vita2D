@@ -31,6 +31,15 @@
 #include "hud.h"
 #include <fstream>
 #include "vita/RendererVita2D.h"
+#if defined(__vita__) || defined(PSP2) || defined(PSVITA) || defined(VITA) || defined(_VITASDK_)
+#include "vita/RendererVita2D.h"
+#if defined(__has_include)
+#  if __has_include("vita/RendererVita2D.h")
+#    define ZGLOOM_HAS_VITA2D 1
+#    include "vita/RendererVita2D.h"
+#  endif
+#endif
+#endif
 
 Uint32 my_callbackfunc(Uint32 interval, void *param)
 {
@@ -748,7 +757,7 @@ SDL_Texture *rendertex = nullptr; // Vita: not needed when using vita2d presente
     static bool s_vitaInit = false;
     if (!s_vitaInit) {
         RendererVita2D::Get().Init(renderwidth, renderheight, 960, 544);
-        RendererVita2D::Get().SetIntegerScaling(true);   // crisp letterbox
+        RendererVita2D::Get().SetIntegerScaling(true); // requests integer scaling; currently no visible effect while Fill mode is forced
         RendererVita2D::Get().SetClearColor(0xFF000000);
         RendererVita2D::Get().SetTargetFps(50); // black
         s_vitaInit = true;
@@ -773,7 +782,11 @@ SDL_Texture *rendertex = nullptr; // Vita: not needed when using vita2d presente
 	SDL_FreeSurface(titlebitmap);
 	SDL_DestroyRenderer(ren);
 	SDL_DestroyWindow(win);
-	SDL_Quit();
+	RendererHooks::shutdown();
+#if defined(__vita__) || defined(PSP2) || defined(PSVITA) || defined(VITA) || defined(_VITASDK_)
+  zgloom_vita::RendererVita2D::Get().Shutdown();
+#endif
+SDL_Quit();
 
 	return 0;
 }

@@ -907,9 +907,9 @@ auto wep = playerobj.data.ms.weapon;
 				}
 				SoundHandler::Play(wtable[wep].sound);
 				if (Config::GetAutoFire()) {
-				playerobj.data.ms.reloadcnt = playerobj.data.ms.reload * 2; // Rapidfire 50% slower (half the speed)
+				playerobj.data.ms.reloadcnt = playerobj.data.ms.reload * 4; // 2025-11-07: global 50% slower (doubling cooldown again for AutoFire)
 			} else {
-				playerobj.data.ms.reloadcnt = playerobj.data.ms.reload;
+				playerobj.data.ms.reloadcnt = playerobj.data.ms.reload * 2; // 2025-11-07: global 50% slower (double cooldown)
 				playerobj.data.ms.fired = 10; // keep single-shot gate
 			}
 				if (!Config::GetAutoFire())

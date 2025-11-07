@@ -103,35 +103,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_link_libraries(${PROJECT_NAME}
-  SDL2_mixer
-  modplug
-  opusfile
-  opus
-  ogg
-  SDL2
-  vita2d
-  mikmod
-  mpg123
-  FLAC
-  vorbisfile
-  vorbis
-  ogg
-  xmp
-  SceDisplay_stub
-  SceCtrl_stub
-  SceAudio_stub
-  SceAudioIn_stub
-  SceSysmodule_stub
-  SceGxm_stub
-  SceCommonDialog_stub
-  SceAppMgr_stub
-  SceTouch_stub
-  SceHid_stub
-  SceMotion_stub
-  SceAppUtil_stub
-  SceLibKernel_stub
-)
+target_link_libraries(${PROJECT_NAME} SDL2_mixer modplug opusfile opus ogg SDL2 vita2d mikmod mpg123 FLAC vorbisfile vorbis xmp SceDisplay_stub SceCtrl_stub SceAudio_stub SceAudioIn_stub SceSysmodule_stub SceGxm_stub SceCommonDialog_stub SceAppMgr_stub SceTouch_stub SceHid_stub SceMotion_stub SceAppUtil_stub SceLibKernel_stub)
 
 vita_create_self(${PROJECT_NAME}.self ${PROJECT_NAME})
 vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} ${PROJECT_NAME}.self
