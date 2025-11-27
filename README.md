@@ -73,8 +73,6 @@ The release supports:
 - **Gloom 3**
 - **Zombie Massacre**
 
-You still need the original game data files (see below).
-
 The game including game data files is also available directly on PS VITA via VitaDB app or [here](https://www.rinnegatamante.eu/vitadb/#/).
 
 ---
