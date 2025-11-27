@@ -1,80 +1,62 @@
-# ZGloom-Vita-Vita2D <br/> GPU-accelerated Amiga **Gloom** Port for PS Vita / PSTV
+# ZGloom-Vita-Vita2D – GPU-accelerated Amiga Gloom port for PS Vita / PSTV
 
-> A Vita2D-based, GPU-accelerated port of the classic Amiga FPS **Gloom** (including Gloom Deluxe, Gloom 3 and Zombie Massacre) for PlayStation Vita and PSTV. Based on version 3.0 of the original SDL ZGloom-Vita port.
+Vita2D-based, GPU-accelerated port of the modern **ZGloom** engine, bringing the classic Amiga FPS **Gloom** and its successors to PlayStation Vita and PSTV.
+
+> Play Gloom, Gloom Deluxe, Gloom 3 and Zombie Massacre on PS Vita / PSTV with a fixed renderer, widescreen support, post-processing overlays and save/load position – while staying faithful to the original Amiga gameplay.
 
 [![Latest release](https://img.shields.io/github/v/release/andiweli/ZGloom-Vita-Vita2D?label=latest%20Vita%20release)](https://github.com/andiweli/ZGloom-Vita-Vita2D/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-PS%20Vita%20%2F%20PSTV-blue)](https://github.com/andiweli/ZGloom-Vita-Vita2D)
-[![Engine](https://img.shields.io/badge/renderer-Vita2D%20GPU-brightgreen)](https://github.com/andiweli/ZGloom-Vita-Vita2D)
+[![Engine](https://img.shields.io/badge/renderer-Vita2D%20GPU%20%2B%20LibXMP-brightgreen.svg)](https://github.com/andiweli/ZGloom-Vita-Vita2D)
 
-**ZGloom-Vita-Vita2D** is a Vita2D version of [ZGloom-Vita-SDL](https://github.com/andiweli/ZGloom-Vita-SDL) with GPU rendering.  
-It brings the Amiga cult FPS **Gloom** and its successors to PS Vita / PSTV with a fixed renderer, stable framerate options and extra visual effects – while staying faithful to the original gameplay.
+ZGloom-Vita-Vita2D is the Vita2D follow-up to the original SDL ZGloom-Vita port, focusing on stable framerates, improved rendering and a console-style experience on Sony’s handhelds.
 
----
-
-## ✨ Key Features (Vita2D & v3.0 Improvements)
-
-Compared to the original Vita SDL port, this Vita2D version adds and improves:
-
-- 🧮 **Optimized & fixed renderer (GPU-based)**  
-  – Vita2D GPU rendering for smoother visuals  
-  – Optimized and cleaned-up renderer code
-
-- ⏱️ **Stable framerate options (50 / 30 FPS)**  
-  – In-game option to choose between **50 FPS** and **30 FPS**  
-  – Both modes tuned for stable framerates on PS Vita / PSTV
-
-- 🩸 **Improved blood & visibility logic**  
-  – Blood is now correctly **occluded by walls** when enemies are beside or behind geometry
-
-- 🔫 **Correct muzzle flash behavior**  
-  – Fixed bug where sideways movement caused the muzzle flash to appear from the side instead of the weapon
-
-- 🎛️ **Better menu navigation & controls**  
-  – DPAD navigation now **loops** through menu entries  
-  – **Circle** = go back  
-  – **Square** = value lower  
-  – **Cross** = value higher
-
-- 🎨 **Atmospheric post-processing overlays**  
-  – Optional **vignette** overlay  
-  – Optional **film grain**  
-  – Optional **scanlines**  
-  – All fully configurable through the in-game options menu
-
-- ⚙️ **Toolchain & size optimizations**  
-  – Toolchain finetuning for up to **~4% smaller `.vpk` size**  
-  – Slight performance improvements thanks to cleaned-up dependencies
-
-- 🔊 **Higher-quality audio defaults**  
-  – `SDL_mixer` and LibXMP player configured for **44 kHz** (previously 22 kHz) for improved sound quality
-
-- 🧹 **General cleanup & UX polish**  
-  – Menu items and descriptions revised and optimized  
-  – All compilation warnings removed  
-  – Non-used dependencies cleaned up
+For other platforms, see the companion projects [ZGloom-x86 (Windows)](https://github.com/Andiweli/ZGloom-x86), [ZGloom-Android](https://github.com/Andiweli/ZGloom-Android) and [ZGloom-macOS](https://github.com/Andiweli/ZGloom-macOS).
 
 ---
 
 ## 🕹 What is Gloom?
 
-[Gloom](https://en.wikipedia.org/wiki/Gloom_(video_game)) was a 1995 Doom-like first-person shooter from **Black Magic Software** for the Commodore Amiga. It featured very messy and meaty graphics and required a powerful Amiga at the time (an A1200 with 030 CPU was still on the low end).  
-
-The engine later powered several related games and successors, including:
+[Gloom](https://en.wikipedia.org/wiki/Gloom_(video_game)) was a 1995 Doom-like first-person shooter from **Black Magic Software** for the Commodore Amiga. It featured very messy and meaty graphics and required a powerful Amiga at the time (an A1200 with 030 CPU was still on the low end). The engine later powered several related games and successors, including:
 
 - **Gloom Deluxe / Ultimate Gloom** – enhanced graphics and effects  
 - **Gloom 3**  
 - **Zombie Massacre**  
 - Various full-game conversions of other 90’s Amiga titles
 
-ZGloom is a modern reimplementation of this engine, and this project is the **PS Vita / PSTV Vita2D port** of that reimplementation.
+ZGloom is a modern reimplementation of this engine.
 
 ---
 
-## 🖼 Screenshots
+## ✨ Key Features
 
-Some screenshots of ZGloom-Vita-Vita2D running on PS Vita:
+- Modern source port of the Amiga Gloom engine  
+  Runs the original Gloom data files on PlayStation Vita and PSTV using the modern ZGloom C++ engine and a Vita2D GPU-accelerated renderer.
 
-![ZGloom-Vita-Vita2D – PS Vita gameplay mockup](https://github.com/user-attachments/assets/98efe43e-9a7a-4fc7-87bf-7463df071cb5)
+- Supports multiple official games  
+  Play **Gloom**, **Gloom Deluxe / Ultimate Gloom**, **Gloom 3** and **Zombie Massacre** (plus selected mods where available).
+
+- Built-in multi-game launcher  
+  If more than one game or mod is present, a simple launcher lets you pick what to play at startup.
+
+- 4:3 and 16:9 display modes with FOV control  
+  Switch between the classic 4:3 Amiga look and a widescreen 16:9 mode and adjust the field of view to match your handheld or TV.
+
+- Improved renderer, lighting and effects  
+  Uses the fixed ZGloom renderer with cleaner perspective, fewer glitches and subtle lighting tweaks, including dynamic muzzle flashes and colored floor reflections under projectiles and weapon upgrade orbs.
+
+- Atmospheric post-processing overlays (optional)  
+  Enable vignette, film grain and scanlines for a more gritty, CRT-style presentation without changing gameplay.
+
+- Save/Load position and extended options  
+  Save your in-level position (including health, weapon and ammo state) and tweak many more options than in the original Amiga release.
+
+---
+
+## 🖼 Gameplay-Video and Screenshots
+
+https://github.com/user-attachments/assets/30cdd05e-575c-4d97-ba64-6a737678c8e3
+
+<img width="1280" height="1440" alt="Gloom-Screenshots" src="https://github.com/user-attachments/assets/57884915-6e74-482c-b9fe-f7c98e389dc0" />
 
 ---
 
@@ -91,7 +73,7 @@ The release supports:
 - **Gloom 3**
 - **Zombie Massacre**
 
-You still need the original game data files (see below).
+The game including game data files is also available directly on PS VITA via VitaDB app or [here](https://www.rinnegatamante.eu/vitadb/#/).
 
 ---
 
@@ -105,7 +87,7 @@ Other official games using the Black Magic **Gloom** engine such as [Gloom 3](ht
 You can:
 
 - Use files from your **original game installation**, or  
-- Download the free releases (thanks to **Gareth Murfin** for permission)
+- Download the free releases (thanks to **Alpha Software** for permission)
 
 ### 2. Install the `.vpk` on your Vita / PSTV
 
@@ -116,12 +98,12 @@ You can:
 
 After extracting the game data on your PC, copy the *folders* (depending on which games you want to play) to the following locations on your Vita:
 
-> ux0:/data/zgloom/gloom  
-> ux0:/data/zgloom/deluxe  
-> ux0:/data/zgloom/gloom3  
-> ux0:/data/zgloom/massacre  
+> ux0:/data/ZGloom/gloom  
+> ux0:/data/ZGloom/deluxe  
+> ux0:/data/ZGloom/gloom3  
+> ux0:/data/ZGloom/massacre  
 
-Once the files are in place, launch **ZGloom-Vita-Vita2D** from the LiveArea and select the game you want to play.
+Once the files are in place, launch **ZGloom-Vita** from the LiveArea and select the game you want to play.
 
 ---
 
@@ -191,10 +173,11 @@ This port follows the original release and **does not** include the Classic Gloo
 - A Vita2D version of ZGloom for **PS Vita** and **PSTV**  
 - Based on the SDL Vita port (version 3.0)  
 - Compatible with **Gloom (Classic)**, **Gloom Deluxe / Ultimate Gloom**, **Gloom 3** and **Zombie Massacre**
+- background ambience credit goes to Prophet
 
 It aims to provide a **fast, GPU-accelerated, and polished Vita experience** of the classic Amiga Gloom engine, with modern conveniences and visual tweaks but without changing the core gameplay.
 
 **Keywords / Topics:**  
-_amiga • gloom • vita • psvita • homebrew • zgloom • gloomdeluxe • zombiemassacre • vita2d • ps tv shooter_
+_amiga • gloom • vita • psvita • windows • x86 • android • macos • homebrew • zgloom • gloomdeluxe • zombiemassacre • sdl • libxmp • vita2d • ps tv shooter_
 
 If you enjoy it, feel free to ⭐ star the repo so other PS Vita & Amiga fans can find it more easily.
