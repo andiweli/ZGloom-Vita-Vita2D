@@ -3,6 +3,28 @@
 #include "config.h"
 #include "objectgraphics.h"
 #include "gloommaths.h"
+#include "effects/MuzzleFlashFX.h"
+static uint8_t g_mz_prev_count = 0;
+
+// Tint per weapon (computed at runtime from weapon icons)
+static float g_weapon_tint[5][3] = {
+    {1.0f, 0.97f, 0.94f},
+    {1.0f, 0.97f, 0.94f},
+    {1.0f, 0.97f, 0.94f},
+    {1.0f, 0.97f, 0.94f},
+    {1.0f, 0.97f, 0.94f}
+};
+
+
+
+void Hud_GetWeaponTint(int wepIndex, float& r, float& g, float& b)
+{
+    if (wepIndex < 0) wepIndex = 0;
+    if (wepIndex > 4) wepIndex = 4;
+    r = g_weapon_tint[wepIndex][0];
+    g = g_weapon_tint[wepIndex][1];
+    b = g_weapon_tint[wepIndex][2];
+}
 
 // ripped from PPM conversion
 static const uint32_t wepraw[5][81*3] =
@@ -163,6 +185,34 @@ Hud::Hud()
 		}
 	}
 
+	// Derive tint per weapon from its 9x9 icon (non-transparent pixels), normalized to keep flash bright.
+	for (int i = 0; i < 5; ++i) {
+		SDL_Surface* s = weaponsprites[i];
+		if (!s) continue;
+		uint64_t sumR = 0, sumG = 0, sumB = 0; int count = 0;
+		for (int y = 0; y < s->h; ++y) {
+			uint32_t* row = (uint32_t*)((uint8_t*)s->pixels + y * s->pitch);
+			for (int x = 0; x < s->w; ++x) {
+				uint32_t p = row[x];
+				if ((p & 0xFF000000u) == 0) continue; // skip transparent
+				sumR += (p >> 16) & 0xFFu;
+				sumG += (p >> 8)  & 0xFFu;
+				sumB += (p >> 0)  & 0xFFu;
+				++count;
+			}
+		}
+		if (count > 0) {
+			float r = (float)sumR / (255.0f * (float)count);
+			float g = (float)sumG / (255.0f * (float)count);
+			float b = (float)sumB / (255.0f * (float)count);
+			float m = r; if (g > m) m = g; if (b > m) m = b; if (m < 1e-4f) m = 1.0f;
+			g_weapon_tint[i][0] = r / m;
+			g_weapon_tint[i][1] = g / m;
+			g_weapon_tint[i][2] = b / m;
+		}
+	}
+
+
 
 	messages.push_back("dummy");
 	messages.push_back("health bonus!");
@@ -232,7 +282,27 @@ Hud::Hud()
 
 void Hud::Render(SDL_Surface* surface, MapObject& player, Font& font)
 {
-	SDL_Rect dstrect;
+// Muzzle flash: counter-bump gate
+// - Trigger when 'fired' rises from 0 OR increases compared to previous frame.
+// - Disarm when 'fired' returns to 0.
+{
+    uint8_t __mz_cur = (uint8_t)player.data.ms.fired;
+    if (__mz_cur > 0) {
+        if (g_mz_prev_count == 0 || __mz_cur > g_mz_prev_count) {
+            int __wep = player.data.ms.weapon; if (__wep < 0) __wep = 0; if (__wep > 4) __wep = 4;
+            float __scale = 1.0f + 0.2f * (float)(__wep);
+            MuzzleFlashFX::Get().SetScale(__scale);
+            MuzzleFlashFX::Get().SetTint(g_weapon_tint[__wep][0], g_weapon_tint[__wep][1], g_weapon_tint[__wep][2]);
+            MuzzleFlashFX::Get().Trigger(1.0f, 1.0f);
+        }
+    } else {
+        if (g_mz_prev_count > 0) {
+            MuzzleFlashFX::Get().Disarm();
+        }
+    }
+    g_mz_prev_count = __mz_cur;
+}
+SDL_Rect dstrect;
 	SDL_Rect srcrect;
 	dstrect.x = 10;
 	dstrect.y = 2;
@@ -269,7 +339,10 @@ void Hud::Render(SDL_Surface* surface, MapObject& player, Font& font)
 	dstrect.w = srcrect.w*scale;
 	SDL_BlitScaled(healthbaron, &srcrect, surface, &dstrect);
 
-	for (int i = 0; i < (6 - player.data.ms.reload); i++)
+	int boostPips = 6 - player.data.ms.reload;
+	if (boostPips < 0) boostPips = 0;
+	if (boostPips > 5) boostPips = 5;
+	for (int i = 0; i < boostPips; i++)
 	{
 		dstrect.x = 11 + 40 - 10 * i;
 		dstrect.w = weaponsprites[player.data.ms.weapon]->w * scale;

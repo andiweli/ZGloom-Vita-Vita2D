@@ -1,13 +1,18 @@
 #include "gamelogic.h"
+#include "EventReplay.h"
 #include "renderer.h"
 #include "monsterlogic.h"
 #include "hud.h"
 #include "config.h"
+#include "cheats/CheatSystem.h"
 #include <cstring>
 #include <psp2/kernel/clib.h> 
 
 void GameLogic::Init(ObjectGraphics *ograph)
 {
+	// Initialize cheat system (reads ux0:/data/ZGloom/cheats.txt if present)
+	Cheats::Init("ux0:/data/ZGloom/cheats.txt");
+
 	// note weird order of SFX.
 	wtable[0].hitpoint = 1;
 	wtable[0].damage = 1;
@@ -49,15 +54,36 @@ void GameLogic::Init(ObjectGraphics *ograph)
 //		else { p1lives = 0; }
 	if (Config::GetGM()) p1health = 32767;
 		else { p1health = 25; }
-	if (Config::GetMW()) p1weapon = 4;
-		else { p1weapon = 0; }
-	// --- original code below	
+
+	// Start weapon selection:
+	//  - Cheats::GetStartWeapon() 0..4  -> fixed weapon cheat
+	//  - Cheats::GetStartWeapon() == 5 -> DEFAULT (no forced weapon), fall back to game defaults
+	{
+		int sw = Cheats::GetStartWeapon();
+		if (sw >= 0 && sw <= 4)
+		{
+			p1weapon = sw;
+		}
+		else
+		{
+			// DEFAULT: honour legacy "MAX WEAPON" config (Photon at start) if enabled,
+			// otherwise fall back to original shotgun (0).
+			if (Config::GetMW())
+				p1weapon = 4;
+			else
+				p1weapon = 0;
+		}
+	}
+// --- original code below	
 	// original player1 params
 	// p1health = 25;
 	// p1weapon = 0;
 
 	p1lives = 3;
-	p1reload = 5;
+	
+	// Apply cheat-configured max lives (1/3/5/9)
+	p1lives = 3 /* removed MAX_LIVES cheat */;
+p1reload = 5;
 	// Ensure starting weapon cheat applies to the actual player MapObject as well
 	if (Config::GetMW()) {
 		for (auto &o : gmap->GetMapObjects()) {
@@ -724,6 +750,14 @@ bool GameLogic::Update(Camera *cam)
 	bool moved = false;
 
 	inc.SetVal(0xd0000);
+
+	// Vita sprint: hold L to run 50%% faster
+	if (Input::GetButton(SCE_CTRL_LTRIGGER)) {
+	    int32_t __v = inc.GetVal();
+	    __v += (__v >> 1); // *1.5
+	    inc.SetVal(__v);
+	}
+
 	newobjects.clear();
 
 	Quick camrots[4], camrotstrafe[4];
@@ -747,6 +781,13 @@ bool GameLogic::Update(Camera *cam)
 		playerobj.data.ms.rotquick = cam->rotquick;
 
 		inc.SetVal(playerobj.data.ms.movspeed);
+
+		// Sprint (L): 2x movement distance (apply after movspeed, so it affects actual displacement)
+		if (Input::GetButton(SCE_CTRL_LTRIGGER)) {
+    		int32_t __v = inc.GetVal();
+    		__v = (__v * 3) >> 1; // *1.5
+    		inc.SetVal(__v);
+		}
 
 		//wire these up to controller as well at some point
 
@@ -856,7 +897,7 @@ bool GameLogic::Update(Camera *cam)
 			*/
 
 			int16_t d2 = playerobj.data.ms.bounce;
-			playerobj.data.ms.bounce += 20;
+			playerobj.data.ms.bounce += (Input::GetButton(SCE_CTRL_LTRIGGER) ? 30 : 20);
 			int16_t d1 = playerobj.data.ms.bounce;
 
 			d2 &= 255;
@@ -880,36 +921,37 @@ bool GameLogic::Update(Camera *cam)
                 std::memset(&camrotstrafe, 0, sizeof(camrotstrafe));
 auto wep = playerobj.data.ms.weapon;
 
-				if (playerobj.data.ms.mega)
+				playerobj.data.ms.reload = Cheats::GetCheatReloadForWeapon(wep, playerobj.data.ms.reload);
+if (playerobj.data.ms.mega)
 				{
 					if (playerobj.data.ms.mega >= (750 + 125))
 					{
 						// ULTRA MEGA OVERKILL
 						playerobj.data.ms.rotquick.SetInt(playerobj.data.ms.rotquick.GetInt() + 8);
-						Shoot(playerobj, this, (playerobj.data.ms.collwith & 3) ^ 3, 0, wtable[wep].hitpoint, wtable[wep].damage, wtable[wep].speed, wtable[wep].shape, wtable[wep].spark);
+						Shoot(playerobj, this, (playerobj.data.ms.collwith & 3) ^ 3, 0, wtable[wep].hitpoint, Cheats::AmplifyPlayerOutgoingDamage(Cheats::AmplifyPlayerOutgoingDamage(wtable[wep].damage)), wtable[wep].speed, wtable[wep].shape, wtable[wep].spark);
 						playerobj.data.ms.rotquick.SetInt(playerobj.data.ms.rotquick.GetInt() - 16);
-						Shoot(playerobj, this, (playerobj.data.ms.collwith & 3) ^ 3, 0, wtable[wep].hitpoint, wtable[wep].damage, wtable[wep].speed, wtable[wep].shape, wtable[wep].spark);
+						Shoot(playerobj, this, (playerobj.data.ms.collwith & 3) ^ 3, 0, wtable[wep].hitpoint, Cheats::AmplifyPlayerOutgoingDamage(Cheats::AmplifyPlayerOutgoingDamage(wtable[wep].damage)), wtable[wep].speed, wtable[wep].shape, wtable[wep].spark);
 						playerobj.data.ms.rotquick.SetInt(playerobj.data.ms.rotquick.GetInt() + 8);
-						Shoot(playerobj, this, (playerobj.data.ms.collwith & 3) ^ 3, 0, wtable[wep].hitpoint, wtable[wep].damage, wtable[wep].speed, wtable[wep].shape, wtable[wep].spark);
+						Shoot(playerobj, this, (playerobj.data.ms.collwith & 3) ^ 3, 0, wtable[wep].hitpoint, Cheats::AmplifyPlayerOutgoingDamage(Cheats::AmplifyPlayerOutgoingDamage(wtable[wep].damage)), wtable[wep].speed, wtable[wep].shape, wtable[wep].spark);
 					}
 					else
 					{
 						playerobj.data.ms.rotquick.SetInt(playerobj.data.ms.rotquick.GetInt() + 4);
-						Shoot(playerobj, this, (playerobj.data.ms.collwith & 3) ^ 3, 0, wtable[wep].hitpoint, wtable[wep].damage, wtable[wep].speed, wtable[wep].shape, wtable[wep].spark);
+						Shoot(playerobj, this, (playerobj.data.ms.collwith & 3) ^ 3, 0, wtable[wep].hitpoint, Cheats::AmplifyPlayerOutgoingDamage(Cheats::AmplifyPlayerOutgoingDamage(wtable[wep].damage)), wtable[wep].speed, wtable[wep].shape, wtable[wep].spark);
 						playerobj.data.ms.rotquick.SetInt(playerobj.data.ms.rotquick.GetInt() - 8);
-						Shoot(playerobj, this, (playerobj.data.ms.collwith & 3) ^ 3, 0, wtable[wep].hitpoint, wtable[wep].damage, wtable[wep].speed, wtable[wep].shape, wtable[wep].spark);
+						Shoot(playerobj, this, (playerobj.data.ms.collwith & 3) ^ 3, 0, wtable[wep].hitpoint, Cheats::AmplifyPlayerOutgoingDamage(Cheats::AmplifyPlayerOutgoingDamage(wtable[wep].damage)), wtable[wep].speed, wtable[wep].shape, wtable[wep].spark);
 						playerobj.data.ms.rotquick.SetInt(playerobj.data.ms.rotquick.GetInt() + 4);
 					}
 				}
 				else
 				{
-					Shoot(playerobj, this, (playerobj.data.ms.collwith & 3) ^ 3, 0, wtable[wep].hitpoint, wtable[wep].damage, wtable[wep].speed, wtable[wep].shape, wtable[wep].spark);
+					Shoot(playerobj, this, (playerobj.data.ms.collwith & 3) ^ 3, 0, wtable[wep].hitpoint, Cheats::AmplifyPlayerOutgoingDamage(wtable[wep].damage), wtable[wep].speed, wtable[wep].shape, wtable[wep].spark);
 				}
 				SoundHandler::Play(wtable[wep].sound);
 				if (Config::GetAutoFire()) {
-				playerobj.data.ms.reloadcnt = playerobj.data.ms.reload * 4; // 2025-11-07: global 50% slower (doubling cooldown again for AutoFire)
+				playerobj.data.ms.reloadcnt = playerobj.data.ms.reload * 2; // Rapidfire 50% slower (half the speed)
 			} else {
-				playerobj.data.ms.reloadcnt = playerobj.data.ms.reload * 2; // 2025-11-07: global 50% slower (double cooldown)
+				playerobj.data.ms.reloadcnt = playerobj.data.ms.reload * 2;
 				playerobj.data.ms.fired = 10; // keep single-shot gate
 			}
 				if (!Config::GetAutoFire())
@@ -993,6 +1035,7 @@ auto wep = playerobj.data.ms.weapon;
 					if (!eventhit[gmap->GetZones()[closestzone].ev])
 					{
 						gmap->ExecuteEvent(gmap->GetZones()[closestzone].ev, gotele, tele);
+							EventReplay::Record(gmap->GetZones()[closestzone].ev);
 					}
 
 					// these are one-shot
@@ -1104,6 +1147,16 @@ auto wep = playerobj.data.ms.weapon;
 	playerobj.data.ms.invisible = playerobjupdated.data.ms.invisible;
 	playerobj.data.ms.thermo = playerobjupdated.data.ms.thermo;
 	playerobj.data.ms.bouncecnt = playerobjupdated.data.ms.bouncecnt;
+
+	// Apply START WEAPON cheat as a fixed weapon while in-game.
+	// Values 0..4 force a specific weapon; 5 (DEFAULT) leaves normal pickup logic untouched.
+	{
+		int sw = Cheats::GetStartWeapon();
+		if (sw >= 0 && sw <= 4)
+		{
+			playerobj.data.ms.weapon = sw;
+		}
+	}
 
 	if (squished)
 	{
@@ -1259,7 +1312,33 @@ void GameLogic::ObjectCollision()
 {
 	for (auto &o : gmap->GetMapObjects())
 	{
-		if (o.data.ms.collwith)
+		
+        // --- Cheats persistent extras: immediate ON/OFF with edge detection ---
+        // We keep previous states to zero-out once on OFF (so normal pickups work again).
+        static bool s_prevThermo = false;
+        static bool s_prevInvis  = false;
+        static bool s_prevBouncy = false;
+
+        const bool cThermo  = Cheats::GetThermoGoggles();
+        const bool cInvis   = Cheats::GetInvisibility();
+        const bool cBouncy  = Cheats::GetBouncyBullets();
+
+        if (o.t == ObjectGraphics::OLT_PLAYER1) {
+            // Immediate ON
+            if (cThermo) { o.data.ms.thermo = 0x7FFF; }
+            if (cInvis)  { o.data.ms.invisible = 0x7FFF; }
+            if (cBouncy) { o.data.ms.bouncecnt = 3; }
+
+            // Immediate OFF (only once at edge, to not block normal pickups)
+            if (!cThermo && s_prevThermo) { o.data.ms.thermo = 0; }
+            if (!cInvis  && s_prevInvis ) { o.data.ms.invisible = 0; }
+            if (!cBouncy && s_prevBouncy) { o.data.ms.bouncecnt = 0; }
+
+            s_prevThermo = cThermo;
+            s_prevInvis  = cInvis;
+            s_prevBouncy = cBouncy;
+        }
+if (o.data.ms.collwith)
 		{
 			for (auto &o2 : gmap->GetMapObjects())
 			{
@@ -1303,7 +1382,11 @@ void GameLogic::ObjectCollision()
 
 					o.data.ms.washit = o2.identifier;
 
-					o.data.ms.hitpoints -= o2.data.ms.damage;
+					{
+    int __d = o2.data.ms.damage;
+    if (Cheats::GetGodMode() && (o.t == ObjectGraphics::OLT_PLAYER1)) { __d = 0; }
+    o.data.ms.hitpoints -= __d;
+}
 					if (o.data.ms.hitpoints <= 0)
 					{
 						o.data.ms.die(o, o2, this);
@@ -1313,7 +1396,11 @@ void GameLogic::ObjectCollision()
 						o.data.ms.hit(o, o2, this);
 					}
 
-					o2.data.ms.hitpoints -= o.data.ms.damage;
+					{
+    int __d2 = o.data.ms.damage;
+    if (Cheats::GetGodMode() && (o2.t == ObjectGraphics::OLT_PLAYER1)) { __d2 = 0; }
+    o2.data.ms.hitpoints -= __d2;
+}
 					if (o2.data.ms.hitpoints <= 0)
 					{
 						o2.data.ms.die(o2, o, this);
@@ -1402,4 +1489,9 @@ void GameLogic::CheckSuck(Camera *cam)
 			cam->z = zpos;
 		}
 	}
+}
+
+void GameLogic::MarkEventHit(int ev)
+{
+	if (ev >= 0 && ev < 25 && ev < 19) { eventhit[ev] = true; }
 }

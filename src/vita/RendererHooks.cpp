@@ -2,6 +2,8 @@
 #include "vita/RendererVita2D.h"
 #ifdef __vita__
 #include <vita2d.h>
+#include "hud.h"
+#include "font.h"
 #endif
 #include <SDL2/SDL.h>
 #include <stdint.h>
@@ -118,6 +120,17 @@ static inline int Warmth01_10() {
 void EnqueueLensFlareScreen(int, int, float, float) {}
 
 namespace RendererHooks {
+    // Deferred HUD render inputs
+    static Hud* g_deferHud = nullptr;
+    static MapObject* g_deferPObj = nullptr;
+    static Font* g_deferFont = nullptr;
+    static int g_deferRW = 320, g_deferRH = 256;
+
+    // Reusable surface + texture + buffer
+    static SDL_Surface* g_hudSurf = nullptr; // ARGB8888
+    static vita2d_texture* g_hudTex = nullptr; // RGBA texture
+    static std::vector<uint32_t> g_hudBuf; // RGBA buffer for upload
+
 
 bool init(SDL_Renderer*, int screenW, int screenH) {
     g_screenW = screenW; g_screenH = screenH;
@@ -144,6 +157,14 @@ void markWorldFrame(){ g_worldFrame = true; }
 
 void setCameraMotion(float, float, float) {}
 void endFramePresent(){}
+
+void DeferHudRender(Hud* hud, MapObject* pobj, Font* font, int renderW, int renderH) {
+    g_deferHud = hud;
+    g_deferPObj = pobj;
+    g_deferFont = font;
+    g_deferRW = (renderW > 0 ? renderW : 320);
+    g_deferRH = (renderH > 0 ? renderH : 256);
+}
 
 void EffectsDrawOverlaysVita2D() {
 #ifdef __vita__
@@ -210,6 +231,66 @@ void EffectsDrawOverlaysVita2D() {
         uint32_t dt  = now - g_lastTicks;
         if (dt < targetMs) SDL_Delay(targetMs - dt);
         g_lastTicks = SDL_GetTicks();
+    }
+#endif
+
+    // --- HUD (deferred) - draw last, over all effects
+#ifdef __vita__
+    if (g_deferHud && g_deferPObj && g_deferFont) {
+        // Create reusable ARGB8888 surface of render size
+        if (!g_hudSurf || g_hudSurf->w != g_deferRW || g_hudSurf->h != g_deferRH) {
+            if (g_hudSurf) { SDL_FreeSurface(g_hudSurf); g_hudSurf = nullptr; }
+            g_hudSurf = SDL_CreateRGBSurfaceWithFormat(0, g_deferRW, g_deferRH, 32, SDL_PIXELFORMAT_ARGB8888);
+        }
+        if (g_hudSurf) {
+            // Clear to transparent
+            SDL_FillRect(g_hudSurf, nullptr, 0x00000000u);
+            // Render HUD into CPU surface
+            g_deferHud->Render(g_hudSurf, *g_deferPObj, *g_deferFont);
+
+            // Ensure RGBA buffer and texture
+            const int Wb = g_hudSurf->w, Hb = g_hudSurf->h;
+            g_hudBuf.resize((size_t)Wb * (size_t)Hb);
+            if (!g_hudTex || vita2d_texture_get_width(g_hudTex) != Wb || vita2d_texture_get_height(g_hudTex) != Hb) {
+                if (g_hudTex) { vita2d_free_texture(g_hudTex); g_hudTex = nullptr; }
+                g_hudTex = vita2d_create_empty_texture_format(Wb, Hb, SCE_GXM_TEXTURE_FORMAT_U8U8U8U8_RGBA);
+            }
+            if (g_hudTex) {
+                // ARGB -> RGBA
+                const uint8_t* src = (const uint8_t*)g_hudSurf->pixels;
+                const int pitch = g_hudSurf->pitch;
+                for (int row=0; row<Hb; ++row) {
+                    const uint32_t* srow = (const uint32_t*)(src + row * pitch);
+                    uint32_t* drow = &g_hudBuf[(size_t)row * (size_t)Wb];
+                    for (int col=0; col<Wb; ++col) {
+                        uint32_t p = srow[col];
+                        uint8_t a = (p >> 24) & 0xFF;
+                        uint8_t r = (p >> 16) & 0xFF;
+                        uint8_t g = (p >> 8)  & 0xFF;
+                        uint8_t b = (p      ) & 0xFF;
+                        drow[col] = (r << 24) | (g << 16) | (b << 8) | (a);
+                    }
+                }
+                void* tp = vita2d_texture_get_datap(g_hudTex);
+                memcpy(tp, g_hudBuf.data(), (size_t)Wb * (size_t)Hb * 4);
+
+                // Place at top-left of letterboxed render area with integer scale
+                const int SW = g_screenW.load();
+                const int SH = g_screenH.load();
+                const int RW = g_deferRW, RH = g_deferRH;
+                int sx = SW / (RW > 0 ? RW : 320); if (sx < 1) sx = 1;
+                int sy = SH / (RH > 0 ? RH : 256); if (sy < 1) sy = 1;
+                int sc = (sx < sy) ? sx : sy;
+                int drawW = RW * sc;
+                int drawH = RH * sc;
+                int dx = (SW - drawW) / 2;
+                int dy = (SH - drawH) / 2;
+
+                vita2d_draw_texture_scale(g_hudTex, (float)dx, (float)dy, (float)sc, (float)sc);
+            }
+        }
+        // consume once per frame
+        g_deferHud = nullptr; g_deferPObj = nullptr; g_deferFont = nullptr;
     }
 #endif
 }

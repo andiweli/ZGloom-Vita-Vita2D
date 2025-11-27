@@ -3,10 +3,12 @@
 
 #ifdef __vita__
 #include <vita2d.h>
+#include <psp2/gxm.h>
 #include <psp2/display.h>
 #include <psp2/kernel/clib.h>
 #include <psp2/kernel/threadmgr.h> // sceKernelDelayThread
 #include <psp2/kernel/processmgr.h>
+#include "config.h"
 #endif
 
 #include <string.h>
@@ -175,7 +177,11 @@ void RendererVita2D::draw_current_texture() {
     if (force_fill_ || scale_mode_ == ScaleMode::Fill) {
         float scale_x = (float)screen_w_ / (float)tex_w_;
         float scale_y = (float)screen_h_ / (float)tex_h_;
-        vita2d_draw_texture_scale((vita2d_texture*)tex_[cur_tex_], 0.0f, 0.0f, scale_x, scale_y);
+                {
+            SceGxmTextureFilter f = (Config::GetBilinearFilter() != 0) ? SCE_GXM_TEXTURE_FILTER_LINEAR : SCE_GXM_TEXTURE_FILTER_POINT;
+            vita2d_texture_set_filters((vita2d_texture*)tex_[cur_tex_], f, f);
+        }
+vita2d_draw_texture_scale((vita2d_texture*)tex_[cur_tex_], 0.0f, 0.0f, scale_x, scale_y);
         return;
     }
 

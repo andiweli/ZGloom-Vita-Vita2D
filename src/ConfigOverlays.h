@@ -10,7 +10,8 @@ namespace Config {
     int  GetFilmGrain();          void SetFilmGrain(int);
     int  GetFilmGrainIntensity(); void SetFilmGrainIntensity(int); // 0..4
     int  GetScanlines();          void SetScanlines(int);
-    int  GetScanlineIntensity();  void SetScanlineIntensity(int);  // 0..4
+    int  GetScanlineIntensity();  void SetScanlineIntensity(int);
+    int  GetBlobShadows();      void SetBlobShadows(int);  // 0..4
 
     // Optional: call once on startup; otherwise lazy-load happens on first access.
     void EffectsConfigInit();

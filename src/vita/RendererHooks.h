@@ -1,32 +1,26 @@
 #pragma once
 #include <SDL2/SDL.h>
 
-void EnqueueLensFlareScreen(int x, int y, float intensity, float scale);
+// Use global project types (do NOT nest them in RendererHooks)
+class Hud;
+class Font;
+struct MapObject;
 
 namespace RendererHooks {
-
-bool init(SDL_Renderer* renderer, int screenW, int screenH);
+// Existing APIs (kept for compatibility; do not remove)
+bool init(SDL_Renderer* ren, int screenW, int screenH);
 void shutdown();
-
-void setRenderSize(int w, int h);
 void setTargetFps(int fps);
-
-void setVignetteLevel(int lvl);
-void setScanlineLevel(int lvl);
-void setFilmGrainLevel(int lvl);
-
+void setRenderSize(int w, int h);
 void beginFrame();
 void markWorldFrame();
 void endFramePresent();
+void setCameraMotion(float dx, float dy, float yawRate);
+void EffectsDrawOverlaysVita2D(); // original overlay entry
 
-int  GetParticleDustEnabled();
-void SetParticleDustEnabled(int onOff);
-void setCameraMotion(float dx, float dy, float dz);
+// FIX: DeferHudRender now takes MapObject& (matches call site: pobj)
+void DeferHudRender(::Hud* hud, ::MapObject& pobj, ::Font* font, int renderW, int renderH);
 
-// New: vita2d overlay hook (called while vita2d frame is open)
-void EffectsDrawOverlaysVita2D();
-
-// Legacy keepalive (ignored)
-inline void EffectsDrawOverlays(SDL_Renderer*) {}
-
+// HUD overlay wrapper that draws HUD last, over vignette/grain/scanlines
+void EffectsDrawOverlaysVita2D_WithHud();
 } // namespace RendererHooks

@@ -5,6 +5,194 @@
 #include "objectgraphics.h"
 #include "config.h"
 #include "vita/RendererHooks.h"
+#include "ConfigOverlays.h" // liefert Config::GetBlobShadows()/SetBlobShadows()
+#include "effects/MuzzleFlashFX.h"
+#include "hud.h"
+
+
+// ---- Simple blob shadow (ZGloom-Vita 3.0) -----------------------------------
+static inline uint32_t ZG_DarkenPixel(uint32_t c, uint8_t alpha/*0..255*/) {
+    // Darken towards black: alpha=96 ~ 0.38 darkening
+    uint32_t a = c & 0xFF000000u;
+    uint32_t r = (c >> 16) & 0xFFu;
+    uint32_t g = (c >>  8) & 0xFFu;
+    uint32_t b =  c        & 0xFFu;
+
+    r = (r * (255 - alpha)) >> 8;
+    g = (g * (255 - alpha)) >> 8;
+    b = (b * (255 - alpha)) >> 8;
+    return a | (r << 16) | (g << 8) | b;
+}
+
+static inline bool ZG_IsEnemyLogicType(int t)
+{
+    using OLT = ObjectGraphics::ObjectLogicType;
+    switch (t)
+    {
+        case OLT::OLT_MARINE:
+        case OLT::OLT_BALDY:
+        case OLT::OLT_TERRA:
+        case OLT::OLT_GHOUL:
+        case OLT::OLT_PHANTOM:
+        case OLT::OLT_DRAGON:
+        case OLT::OLT_LIZARD:
+        case OLT::OLT_DEATHHEAD:
+        case OLT::OLT_TROLL:
+        case OLT::OLT_DEMON:
+            return true;
+        default:
+            return false;
+    }
+}
+
+// Draw a flat ellipse under the feet with Z-occlusion against geometry.
+static inline void ZG_DrawBlobShadow(
+    uint32_t* surface, int renderwidth, int renderheight, const int32_t* zbuff,
+    int cx, int cy, int rx, int ry, int iz, bool thermoOn)
+{
+	if (!Config::GetBlobShadows()) return;  // Toggle OFF Ã¢ÂÂ kein Schatten zeichnen
+
+    if (thermoOn) return;                 // optional: disable with thermo-glasses
+    if (rx <= 0 || ry <= 0) return;
+
+    int y0 = cy - ry;
+    int y1 = cy;
+    if (y0 < 0) y0 = 0; if (y1 >= renderheight) y1 = renderheight - 1;
+
+    for (int y = y0; y <= y1; ++y)
+    {
+        float ny  = (float)(y - cy) / (float)ry;            // [-1..0]
+        float base = 1.0f - ny*ny; if (base < 0.0f) base = 0.0f;
+        float spanf = (float)rx * sqrtf(base);
+        int xl = cx - (int)spanf;
+        int xr = cx + (int)spanf;
+
+        if (xl < 0) xl = 0;
+        if (xr >= renderwidth) xr = renderwidth - 1;
+        if (xl > xr) continue;
+
+        for (int x = xl; x <= xr; ++x)
+        {
+            if (iz > zbuff[x]) continue;  // occluded by nearer geometry in this column
+            uint32_t idx = (uint32_t)(x + y * renderwidth);
+            surface[idx] = ZG_DarkenPixel(surface[idx], 96); // 96 Ã¢ÂÂ 38% darken
+        }
+    }
+}
+
+
+// ZGloom-Vita: projectile ground glow under flying bullets (tied to MUZZLE FLASH).
+static inline void ZG_DrawProjectileGlow(
+    uint32_t* surface,
+    int renderwidth,
+    int renderheight,
+    const int32_t* zbuff,
+    const int32_t* floorstart,
+    int cx,
+    int spriteWidth,
+    int iz,
+    float tintR,
+    float tintG,
+    float tintB,
+    int cameraY,
+    int focmult,
+    int halfrenderheight)
+{
+    if (Config::GetMuzzleFlash() == 0) return;
+    if (!surface || !zbuff || !floorstart) return;
+    if (cx < 0 || cx >= renderwidth) return;
+    if (iz <= 0) return;
+
+    // Bodenzeile direkt aus Floor-Projektion bestimmen (wie DrawFloor):
+    // y = halfrenderheight + cameraY * focmult / z
+    int fyCenter = halfrenderheight + (cameraY * focmult) / iz;
+    if (fyCenter < 0) fyCenter = 0;
+    if (fyCenter >= renderheight) fyCenter = renderheight - 1;
+
+    // Distanz-Falloff: nah breit & hell, fern schmal & dunkel
+    const int zNear = 128;
+    const int zFar  = 4096;
+    int z = iz;
+    if (z < zNear) z = zNear;
+    if (z > zFar)  z = zFar;
+
+    float distF = 1.0f - (float)(z - zNear) / (float)(zFar - zNear);
+    if (distF < 0.0f) distF = 0.0f;
+    if (distF > 1.0f) distF = 1.0f;
+    if (distF <= 0.01f) return;
+
+    // Basisbreite: ca. 1.5ÃÂ Geschossbreite, skaliert mit Distanz
+    int baseRx = (spriteWidth * 3) / 4; // Radius -> ~1.5x Gesamtbreite
+    if (baseRx < 1) baseRx = 1;
+    int rx = (int)((float)baseRx * (0.5f + 0.5f * distF));
+    if (rx < 1) rx = 1;
+
+    // Vertikale Ausdehnung fÃÂ¼r mehr Tiefe: ellipsenfÃÂ¶rmig in Bildschirmkoordinaten
+    int baseRy = spriteWidth / 3;
+    if (baseRy < 2) baseRy = 2;
+    if (baseRy > 12) baseRy = 12;
+    int ry = (int)((float)baseRy * (0.5f + 0.5f * distF));
+    if (ry < 2) ry = 2;
+
+    // Tint in 0..255 vorbereiten
+    int tr = (int)(255.0f * tintR); if (tr < 0) tr = 0; if (tr > 255) tr = 255;
+    int tg = (int)(255.0f * tintG); if (tg < 0) tg = 0; if (tg > 255) tg = 255;
+    int tb = (int)(255.0f * tintB); if (tb < 0) tb = 0; if (tb > 255) tb = 255;
+
+    for (int dx = -rx; dx <= rx; ++dx)
+    {
+        int sx = cx + dx;
+        if (sx < 0 || sx >= renderwidth) continue;
+
+        // Nie hinter nÃÂ¤herer Geometrie zeichnen
+        if (iz > zbuff[sx]) continue;
+
+        // Clip nach oben: nie ÃÂ¼ber die erste sichtbare Bodenzeile zeichnen
+        int floorClip = floorstart[sx];
+        if (floorClip < 0) floorClip = 0;
+        if (floorClip >= renderheight) continue;
+
+        for (int dy = -ry; dy <= ry; ++dy)
+        {
+            int sy = fyCenter + dy;
+            if (sy < floorClip) continue;           // nicht ÃÂ¼ber die Bodenkante
+            if (sy >= renderheight) break;         // weiter unten ist nur noch Offscreen
+
+            // 2D-Ellipse in Bildschirmkoordinaten (nx, ny in [-1, 1])
+            float nx = (float)dx / (float)rx;
+            float ny = (float)dy / (float)ry;
+            float radial = 1.0f - (nx * nx + ny * ny);
+            if (radial <= 0.0f) continue;
+
+            float colStrength = distF * radial;
+            if (colStrength <= 0.01f) continue;
+
+            uint32_t* p = &surface[sx + sy * renderwidth];
+            uint32_t c  = *p;
+
+            int br = (c >> 16) & 0xFF;
+            int bg = (c >> 8)  & 0xFF;
+            int bb = (c      ) & 0xFF;
+
+            float alpha = 0.35f * colStrength;
+            if (alpha <= 0.0f) continue;
+            if (alpha > 1.0f) alpha = 1.0f;
+
+            float nr = (float)br * (1.0f - alpha) + (float)tr * alpha;
+            float ng = (float)bg * (1.0f - alpha) + (float)tg * alpha;
+            float nb = (float)bb * (1.0f - alpha) + (float)tb * alpha;
+
+            if (nr > 255.0f) nr = 255.0f;
+            if (ng > 255.0f) ng = 255.0f;
+            if (nb > 255.0f) nb = 255.0f;
+
+            *p = (c & 0xFF000000u) |
+                 (((uint32_t)nr) << 16) |
+                 (((uint32_t)ng) << 8)  |
+                 (((uint32_t)nb));
+        }
+    }
+}
 
 // ---- Fast Smooth-Lighting LUT (8-bit fixed point) ---------------------------
 #include <math.h>
@@ -729,6 +917,101 @@ void Renderer::DrawObjects(Camera* camera)
 						dy.SetInt(shapeheight);
 
 						temp.SetInt(w);
+
+
+                        // --- ZGloom: simple z-occluded blob shadow (enemies only) ---
+                        if (ZG_IsEnemyLogicType(o.t))
+                        {
+                            // Sprite center x in screen, foot y at bottom of sprite
+                            int cx = ix + halfrenderwidth;
+                            int ystart_shadow = halfrenderheight - iy - h;
+                            int cy = ystart_shadow + h;
+
+                            // Flat ellipse: wider than tall; based on sprite width
+                            int rx = (w / 3); if (rx < 1) rx = 1;
+                            int ry = (w / 8); if (ry < 1) ry = 1;
+
+                            // Performance: skip very small, distant shadows
+                            const int kShadowFarZ    = 4096;
+                            const int kShadowMinSize = 12;
+
+                            bool skipShadow = (iz > kShadowFarZ) && (w < kShadowMinSize && h < kShadowMinSize);
+
+                            if (!skipShadow)
+                            {
+                                ZG_DrawBlobShadow(surface, renderwidth, renderheight, zbuff.data(), cx, cy, rx, ry, iz, thermo);
+                            }
+                        }
+                        // --- ZGloom: projectile ground glow (player bullets only) ---
+                        if (objectgraphics && o.data.ms.shape)
+                        {
+                            int wepIndex = -1;
+                            for (int wi = 0; wi < 5; ++wi)
+                            {
+                                if (o.data.ms.shape == &objectgraphics->BulletShapes[wi])
+                                {
+                                    wepIndex = wi;
+                                    break;
+                                }
+                            }
+
+                            if (wepIndex >= 0)
+                            {
+                                int cx_proj = ix + halfrenderwidth;
+                                if (cx_proj >= 0 && cx_proj < renderwidth)
+                                {
+                                    float tr = 1.0f, tg = 1.0f, tb = 1.0f;
+                                    Hud_GetWeaponTint(wepIndex, tr, tg, tb);
+
+                                    int glowW = w;
+
+                                    // Weapon upgrade pickups (floating weapon balls):
+                                    // make the ground glow larger when they are at the bottom of their bob.
+                                    if (o.t >= ObjectGraphics::OLT_WEAPON1 && o.t <= ObjectGraphics::OLT_WEAPON5)
+                                    {
+                                        // Approximate bobbing height by how close the sprite bottom is to the floor in screen space.
+                                        int ystart_sprite = halfrenderheight - iy - h;
+                                        int spriteBottom = ystart_sprite + h;
+
+                                        int floorClip = floorstart[cx_proj];
+                                        if (floorClip < 0) floorClip = 0;
+                                        if (floorClip >= renderheight) floorClip = renderheight - 1;
+
+                                        int gap = floorClip - spriteBottom; // >= 0: distance from pickup bottom to floor
+                                        if (gap < 0) gap = 0;
+
+                                        int maxGap = h / 2;
+                                        if (maxGap < 8)  maxGap = 8;
+                                        if (maxGap > 32) maxGap = 32;
+
+                                        float t = 1.0f - (float)gap / (float)maxGap;
+                                        if (t < 0.0f) t = 0.0f;
+                                        if (t > 1.0f) t = 1.0f;
+
+                                        // Top of bob (weit vom Boden)  -> t ~ 0 -> 1.0x
+                                        // Bottom of bob (nahe am Boden)-> t ~ 1 -> 1.5x
+                                        float sizeScale = 1.0f + 0.5f * t;
+                                        glowW = (int)((float)w * sizeScale);
+                                        if (glowW < 1) glowW = 1;
+                                    }
+
+                                    ZG_DrawProjectileGlow(
+                                        surface,
+                                        renderwidth,
+                                        renderheight,
+                                        zbuff.data(),
+                                        floorstart.data(),
+                                        cx_proj,
+                                        glowW,
+                                        iz,
+                                        tr, tg, tb,
+                                        camera->y,
+                                        focmult,
+                                        halfrenderheight);
+                                }
+                            }
+                        }
+
 						dx = dx / temp;
 
 						temp.SetInt(h);

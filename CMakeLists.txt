@@ -8,7 +8,7 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   endif()
 endif()
 
-project(ZGloomVita)
+project(ZGloomCollection)
 include("${VITASDK}/share/vita.cmake" REQUIRED)
 
 # ----------------------------------------------------------------------------------
@@ -36,9 +36,9 @@ if(VITA_PERF_TWEAKS)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections -Wl,--as-needed")
 endif()
 
-set(VITA_APP_NAME "ZGloomVita")
-set(VITA_TITLEID  "JETSGLOOM")
-set(VITA_VERSION  "03.00")
+set(VITA_APP_NAME "Gloom Collection")
+set(VITA_TITLEID  "ZGLOOMCOL")
+set(VITA_VERSION  "11.25")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu11")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fpermissive")
@@ -63,6 +63,9 @@ add_executable(${PROJECT_NAME}
 	src/config.cpp
 	src/titlescreen.h
 	src/titlescreen.cpp
+	src/SaveSystem.h
+	src/SaveSystem.cpp
+	src/BGMResume.cpp
 	src/hud.h
 	src/hud.cpp
 	src/iffhandler.h
@@ -70,6 +73,8 @@ add_executable(${PROJECT_NAME}
 	src/font.h
 	src/font.cpp
 	src/menuscreen.cpp
+    src/Cheats.cpp
+    src/BootGameSelect.cpp
 	src/menuscreen.h
 	src/gamelogic.cpp
 	src/gamelogic.h
@@ -90,6 +95,9 @@ add_executable(${PROJECT_NAME}
 	src/renderer.cpp
 	src/zgloom.cpp
 
+
+    src/audio/EmbeddedBGM.cpp
+    src/audio/AtmosphereVolume.cpp
 )
 
 
@@ -99,11 +107,45 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/vita/RendererHooks.cpp
 	src/ConfigEffectsFallback.cpp
 )
+
+# Optional: Draw HUD last over effects (deferred HUD overlay)
+if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/vita/RendererHooks_HudDeferred.cpp")
+    target_sources(${PROJECT_NAME} PRIVATE src/vita/RendererHooks_HudDeferred.cpp)
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_link_libraries(${PROJECT_NAME} SDL2_mixer modplug opusfile opus ogg SDL2 vita2d mikmod mpg123 FLAC vorbisfile vorbis xmp SceDisplay_stub SceCtrl_stub SceAudio_stub SceAudioIn_stub SceSysmodule_stub SceGxm_stub SceCommonDialog_stub SceAppMgr_stub SceTouch_stub SceHid_stub SceMotion_stub SceAppUtil_stub SceLibKernel_stub)
+target_link_libraries(${PROJECT_NAME}
+  SDL2_mixer
+  modplug
+  opusfile
+  opus
+  ogg
+  SDL2
+  vita2d
+  mikmod
+  mpg123
+  FLAC
+  vorbisfile
+  vorbis
+  ogg
+  xmp
+  SceDisplay_stub
+  SceCtrl_stub
+  SceAudio_stub
+  SceAudioIn_stub
+  SceSysmodule_stub
+  SceGxm_stub
+  SceCommonDialog_stub
+  SceAppMgr_stub
+  SceTouch_stub
+  SceHid_stub
+  SceMotion_stub
+  SceAppUtil_stub
+  SceLibKernel_stub
+)
 
 vita_create_self(${PROJECT_NAME}.self ${PROJECT_NAME})
 vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} ${PROJECT_NAME}.self
@@ -126,9 +168,6 @@ vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} ${PROJECT_NAME}.self
   FILE sce_sys/pic0.png sce_sys/pic0.png
   FILE sce_sys/livearea/contents/bg.png sce_sys/livearea/contents/bg.png
   FILE sce_sys/livearea/contents/startup.png sce_sys/livearea/contents/startup.png
-  FILE sce_sys/livearea/contents/gloomdeluxe.png sce_sys/livearea/contents/gloomdeluxe.png
-  FILE sce_sys/livearea/contents/gloom3.png sce_sys/livearea/contents/gloom3.png
-  FILE sce_sys/livearea/contents/zombiemassacre.png sce_sys/livearea/contents/zombiemassacre.png
   FILE sce_sys/livearea/contents/template.xml sce_sys/livearea/contents/template.xml
 )
 
@@ -145,3 +184,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mfpu=neon -mfloat-abi=hard")
 endif()
 # -----------------------------------------------------------
 # Added by patch: streaming-texture bridge
+# CPU Muzzle Flash one-frame
+target_sources(${PROJECT_NAME} PRIVATE src/effects/MuzzleFlashFX.cpp)
+
+# --- EventReplay (save/load event re-trigger) ---
+target_sources(${PROJECT_NAME} PRIVATE src/EventReplay.cpp)

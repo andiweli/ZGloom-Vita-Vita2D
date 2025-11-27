@@ -13,7 +13,9 @@ class GloomMap;
 class GameLogic
 {
 	public:
-		void Init(ObjectGraphics* ograph);
+		
+		void MarkEventHit(int ev);
+void Init(ObjectGraphics* ograph);
 		void InitLevel(GloomMap* gmapin, Camera* cam, ObjectGraphics* ograph);
 		bool Update(Camera* cam);
 		int32_t GetTeleEffect();

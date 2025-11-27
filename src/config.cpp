@@ -68,7 +68,8 @@ namespace Config
 
 	static int sfxvol;
 	static int musvol;
-	static xmp_context musctx;
+	
+	static int atmosVolume9 = 7;static xmp_context musctx;
 
 	// needed to toggle fullscreen
 	static SDL_Window *win;
@@ -362,12 +363,12 @@ namespace Config
 		configkeys[KEY_SRIGHT] = SCE_CTRL_RIGHT;
 		configkeys[KEY_STRAFEMOD] = SCE_CTRL_CIRCLE;
 
-		renderwidth = 320;
+		renderwidth = 452;
 		renderheight = 256;
 		windowwidth = 960;
 		windowheight = 544;
 
-		focallength = 128;
+		focallength = 192;
 
 		mousesens = 2;
 		bloodsize = 2;
@@ -583,6 +584,15 @@ if (command == "godmode")
 		return musvol;
 	}
 
+	int GetAtmosVolume()
+	{
+		return atmosVolume9;
+	}
+	void SetAtmosVolume(int v)
+	{
+		if (v<0) v=0; if (v>9) v=9; atmosVolume9 = v;
+	}
+
 	int GetAutoFire()
 	{
 		return autofire ? 1 : 0;
@@ -743,6 +753,9 @@ file << "\n;Rapidfire?\n";
 			file << "GRAIN_I=" << Config::GetFilmGrainIntensity() << "\n";
 			file << "SCAN=" << Config::GetScanlines() << "\n";
 			file << "SCAN_I=" << Config::GetScanlineIntensity() << "\n";
+			file << "MUZZLE=" << Config::GetMuzzleFlash() << "\n";
+            file << "BLOB=" << Config::GetBlobShadows() << "\n";
+			file << "BILINEAR=" << Config::GetBilinearFilter() << "\n";
 			file.close();
 		}
 	
@@ -825,6 +838,9 @@ static void LoadNormalizedKeys()
             sfxvol = parse_int(val);
         } else if (ieq(key, "MUSIC")) {
             musvol = parse_int(val);
+        }
+        else if (ieq(key, "ATMOS") || ieq(key, "ATMOSPHERE VOLUME") || ieq(key, "ATMOSPHEREVOLUME") || ieq(key, "ATMOSVOL")) {
+            int v = parse_int(val); if (v<0) v=0; if (v>9) v=9; atmosVolume9 = v;
         } else if (ieq(key, "MULTITHREAD")) {
             multithread = parse_int(val)!=0;
         } else if (ieq(key, "MAXFPS")) {
@@ -859,6 +875,12 @@ static void LoadNormalizedKeys()
             SetVignetteSoftness(parse_int(val));
         } else if (ieq(key, "V_WARMTH")) {
             SetVignetteWarmth(parse_int(val));
+                } else if (ieq(key, "BLOB")) {
+            SetBlobShadows(parse_int(val)!=0);
+} else if (ieq(key, "MUZZLE")) {
+            SetMuzzleFlash(parse_int(val));
+        } else if (ieq(key, "BILINEAR")) {
+            SetBilinearFilter(parse_int(val));
         }
     }
     std::fclose(f);
@@ -932,7 +954,8 @@ static void NormalizeConfigFileToNewStyle()
 
     std::fputs(";Audio volumes\n", out);
     std::fprintf(out, "SFX=%d\n", sfx);
-    std::fprintf(out, "MUSIC=%d\n\n", mus);
+    std::fprintf(out, "MUSIC=%d\n", mus);
+    std::fprintf(out, "ATMOS=%d\n\n", atmosVolume9);
 
     std::fputs(";Multithreaded renderer (somewhat experimental)\n", out);
     std::fputs(";Has to be enabled for PS Vita.\n", out);
@@ -963,6 +986,9 @@ static void NormalizeConfigFileToNewStyle()
     std::fprintf(out, "GRAIN_INTENSITY=%d\n", GetFilmGrainIntensity());
     std::fprintf(out, "SCAN=%d\n", GetScanlines());
     std::fprintf(out, "SCAN_INTENSITY=%d\n", GetScanlineIntensity());
+	std::fprintf(out, "MUZZLE=%d\n", GetMuzzleFlash());
+	std::fprintf(out, "BILINEAR=%d\n", GetBilinearFilter());
+	std::fprintf(out, "BLOB=%d\n", GetBlobShadows());
     std::fclose(out);
 }
 

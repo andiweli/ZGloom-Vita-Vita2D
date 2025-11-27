@@ -1,56 +1,79 @@
 // src/ConfigEffectsFallback.cpp — stub implementations for effects config
 // Provides missing symbols referenced by menus & save code when the full effects system is not compiled.
+// Safe to drop in: contains only in-memory state (no file I/O).
+
 #include <algorithm>
 
 namespace Config {
 
+static inline int clampi(int v, int lo, int hi){ return v < lo ? lo : (v > hi ? hi : v); }
+static inline int clamp01(int v){ return v ? 1 : 0; }
+static inline int clamp05(int v){ return clampi(v, 0, 5); }
+static inline int clampm100_100(int v){ return clampi(v, -100, 100); }
+
+// --- Stored as simple integers; defaults OFF/0 ---
 static int gVignetteEnabled     = 0;
 static int gVignetteStrength    = 0; // 0..5
 static int gVignetteRadius      = 0; // 0..5
 static int gVignetteSoftness    = 0; // 0..5
-static int gVignetteWarmth      = 0; // 0..5
+static int gVignetteWarmth      = 0; // -100..100
 
-static int gFilmGrain           = 0; // 0..5
+static int gFilmGrain           = 0; // 0/1
 static int gFilmGrainIntensity  = 0; // 0..5
 
-static int gScanlines           = 0; // 0..5
+static int gScanlines           = 0; // 0/1
 static int gScanlineIntensity   = 0; // 0..5
 
-inline int clamp05(int v){ return std::max(0, std::min(5, v)); }
+static int gMuzzleFlash         = 0; // 0/1
+static int gBilinearFilter      = 0; // 0/1
 
-void EffectsConfigInit() {
-    // No-op in fallback; defaults remain.
-}
+// NEW: Blob shadows (0/1)
+static int gBlobShadows         = 0; // 0/1
 
-// Vignette
-void SetVignetteEnabled(int v)   { gVignetteEnabled  = v ? 1 : 0; }
-int  GetVignetteEnabled()        { return gVignetteEnabled; }
+// --- Effects config lifecycle stubs (no-op here) ---
+void EffectsConfigInit()  {}
+void EffectsConfigSave()  {}
 
-void SetVignetteStrength(int v)  { gVignetteStrength = clamp05(v); }
-int  GetVignetteStrength()       { return gVignetteStrength; }
+// --- Vignette ---
+void SetVignetteEnabled(int v)     { gVignetteEnabled  = clamp01(v); }
+int  GetVignetteEnabled()          { return gVignetteEnabled; }
 
-void SetVignetteRadius(int v)    { gVignetteRadius   = clamp05(v); }
-int  GetVignetteRadius()         { return gVignetteRadius; }
+void SetVignetteStrength(int v)    { gVignetteStrength = clamp05(v); }
+int  GetVignetteStrength()         { return gVignetteStrength; }
 
-void SetVignetteSoftness(int v)  { gVignetteSoftness = clamp05(v); }
-int  GetVignetteSoftness()       { return gVignetteSoftness; }
+void SetVignetteRadius(int v)      { gVignetteRadius   = clamp05(v); }
+int  GetVignetteRadius()           { return gVignetteRadius; }
 
-void SetVignetteWarmth(int v)    { gVignetteWarmth   = clamp05(v); }
-int  GetVignetteWarmth()         { return gVignetteWarmth; }
+void SetVignetteSoftness(int v)    { gVignetteSoftness = clamp05(v); }
+int  GetVignetteSoftness()         { return gVignetteSoftness; }
 
-// Film grain
-void SetFilmGrain(int v)         { gFilmGrain = clamp05(v); }
-int  GetFilmGrain()              { return gFilmGrain; }
+void SetVignetteWarmth(int v)      { gVignetteWarmth   = clampm100_100(v); }
+int  GetVignetteWarmth()           { return gVignetteWarmth; }
 
-void SetFilmGrainIntensity(int v){ gFilmGrainIntensity = clamp05(v); }
-int  GetFilmGrainIntensity()     { return gFilmGrainIntensity; }
+// --- Film grain ---
+void SetFilmGrain(int v)           { gFilmGrain = clamp01(v); }
+int  GetFilmGrain()                { return gFilmGrain; }
 
-// Scanlines
-void SetScanlines(int v)         { gScanlines = clamp05(v); }
-int  GetScanlines()              { return gScanlines; }
+void SetFilmGrainIntensity(int v)  { gFilmGrainIntensity = clamp05(v); }
+int  GetFilmGrainIntensity()       { return gFilmGrainIntensity; }
 
-void SetScanlineIntensity(int v) { gScanlineIntensity = clamp05(v); }
-int  GetScanlineIntensity()      { return gScanlineIntensity; }
+// --- Scanlines ---
+void SetScanlines(int v)           { gScanlines = clamp01(v); }
+int  GetScanlines()                { return gScanlines; }
+
+void SetScanlineIntensity(int v)   { gScanlineIntensity = clamp05(v); }
+int  GetScanlineIntensity()        { return gScanlineIntensity; }
+
+// --- Other display flags already stubbed here ---
+int  GetMuzzleFlash()              { return gMuzzleFlash; }
+void SetMuzzleFlash(int on)        { gMuzzleFlash = clamp01(on); }
+
+int  GetBilinearFilter()           { return gBilinearFilter; }
+void SetBilinearFilter(int on)     { gBilinearFilter = clamp01(on); }
+
+// --- NEW: Blob shadows ON/OFF ---
+int  GetBlobShadows()              { return gBlobShadows; }
+void SetBlobShadows(int on)        { gBlobShadows = clamp01(on); }
 
 } // namespace Config
 

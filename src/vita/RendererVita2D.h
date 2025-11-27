@@ -5,6 +5,8 @@ namespace zgloom_vita {
 
 class RendererVita2D {
 public:
+    void SetBilinear(bool on);
+    bool GetBilinear() const;
     enum class ScaleMode {
         Auto,
         Integer,
@@ -36,7 +38,8 @@ public:
     bool IsInitialized() const { return initialized_; }
 
 private:
-    RendererVita2D() = default;
+        bool bilinear_enabled_ = false;
+RendererVita2D() = default;
     ~RendererVita2D() = default;
     RendererVita2D(const RendererVita2D&) = delete;
     RendererVita2D& operator=(const RendererVita2D&) = delete;

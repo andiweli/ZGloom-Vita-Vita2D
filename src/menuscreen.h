@@ -13,6 +13,8 @@ public:
 	enum MenuReturn
 	{
 		MENURET_PLAY,
+		MENURET_SAVE,
+		MENURET_LOAD,
 		MENURET_QUIT,
 		MENURET_NOTHING
 	};
@@ -29,7 +31,8 @@ private:
 		ACTION_SWITCHMENU,
 		ACTION_BOOL,
 		ACTION_INT,
-		ACTION_RETURN
+		ACTION_RETURN,
+		ACTION_PROFILE
 	};
 
 	struct MenuEntry

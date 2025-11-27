@@ -46,3 +46,6 @@ class Hud
 		std::vector<std::string> messages;
 		
 };
+
+// Global helper to fetch per-weapon muzzle tint (normalized RGB 0..1)
+void Hud_GetWeaponTint(int wepIndex, float& r, float& g, float& b);

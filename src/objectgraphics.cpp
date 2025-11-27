@@ -605,6 +605,35 @@ ObjectGraphics::ObjectGraphics()
 	objectlogic[OLT_LIZARD].punchrate = 3;
 	objectlogic[OLT_TROLL].punchrate = 3;
 
+    // Vita tweak: globally slow down monster walk speed (~20% slower).
+    // We leave player, pickups and special tokens untouched and only scale
+    // AI-driven enemies (marine, baldy, terra, ghoul, phantom, demon,
+    // lizard, deathhead, troll, dragon).
+    {
+        const int speedNum = 4;  // numerator for speed scaling (4/5)
+        const int speedDen = 5;  // denominator for speed scaling
+
+        const int slowTypes[] =
+        {
+            OLT_MARINE,
+            OLT_BALDY,
+            OLT_TERRA,
+            OLT_GHOUL,
+            OLT_PHANTOM,
+            OLT_DEMON,
+            OLT_LIZARD,
+            OLT_DEATHHEAD,
+            OLT_TROLL,
+            OLT_DRAGON
+        };
+
+        for (size_t i = 0; i < sizeof(slowTypes) / sizeof(slowTypes[0]); ++i)
+        {
+            int t = slowTypes[i];
+            objectlogic[t].movspeed = objectlogic[t].movspeed * speedNum / speedDen;
+        }
+    }
+	// END
 
 	return;
 }

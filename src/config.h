@@ -53,6 +53,12 @@ namespace Config
 	void SetMouseSens(int sens);
 	int GetBlood();
 	void SetBlood(int b);
+	int  GetMuzzleFlash();
+	void SetMuzzleFlash(int on);
+
+	int  GetBilinearFilter();
+	void SetBilinearFilter(int on);
+
 	void SetDebug(bool b);
 	bool GetDebug();
 	void SetFPS(uint32_t f);
@@ -89,6 +95,8 @@ namespace Config
 	int GetSFXVol();
 	void SetSFXVol(int vol);
 	int GetMusicVol();
+	int GetAtmosVolume();
+	void SetAtmosVolume(int v);
 	void SetMusicVol(int vol);
 	void RegisterMusContext(xmp_context ctx);
 	
